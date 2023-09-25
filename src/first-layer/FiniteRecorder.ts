@@ -7,6 +7,8 @@ export class FiniteRecorder {
 
   private timeoutId: number | undefined;
 
+  private interrupted?: boolean;
+
   constructor(private props: FiniteRecorderProps) {
     this.mediaRecorder = new MediaRecorder(props.mediaStream);
     this.timeoutId = window.setTimeout(() => {
@@ -18,6 +20,10 @@ export class FiniteRecorder {
 
   private async config() {
     this.mediaRecorder.addEventListener("dataavailable", async (event) => {
+      if (this.interrupted) {
+        return;
+      }
+
       const audioBuffer = await blobToAudioBuffer(event.data);
       const rms = calcRMS(audioBuffer);
 
@@ -34,6 +40,11 @@ export class FiniteRecorder {
   }
 
   stop() {
+    this.mediaRecorder.stop();
+  }
+
+  interrupt() {
+    this.interrupted = true;
     this.mediaRecorder.stop();
   }
 }

@@ -4,7 +4,6 @@ import { RecorderProps } from "./Recorder.interface";
 export class Recorder {
   private globalFiniteRecorder: FiniteRecorder | undefined;
   private audioSementationRecorder: FiniteRecorder | undefined;
-  private microRecorder: FiniteRecorder | undefined;
   private silenceCheckRecorder: FiniteRecorder | undefined;
 
   private intervalId: number | undefined;
@@ -19,7 +18,7 @@ export class Recorder {
       onTerminate: (audioData) => {
         this.props.onTerminate(audioData);
 
-        this.clear();
+        this.stop();
       },
     });
 
@@ -27,31 +26,31 @@ export class Recorder {
   }
 
   private setAudiosegmentationRecorder() {
-    if (this.audioSementationRecorder !== undefined) {
-      return;
-    }
-
     this.audioSementationRecorder = new FiniteRecorder({
       mediaStream: this.props.mediaStream,
       ttl: this.props.maxRecordingTime,
 
       onTerminate: (audioData) => {
         this.props.onDataSegmentation(audioData);
-
-        this.setAudiosegmentationRecorder;
       },
     });
+
+    this.audioSementationRecorder.start();
   }
 
   private setSilenceWindowInspector() {
     this.silenceCheckRecorder = new FiniteRecorder({
       mediaStream: this.props.mediaStream,
       ttl: this.props.silenceWindowThreshold,
-      onTerminate: () => {
-        this.audioSementationRecorder!.stop();
+      onTerminate: ({ rms }) => {
+        if (rms < this.props.silenceVolumeThreshold) {
+          this.audioSementationRecorder?.stop();
+        }
         this.silenceCheckRecorder = undefined;
       },
     });
+
+    this.silenceCheckRecorder.start();
   }
 
   private setMicroRecorder() {
@@ -59,30 +58,46 @@ export class Recorder {
       new FiniteRecorder({
         mediaStream: this.props.mediaStream,
         ttl: this.props.silenceVolumeThreshold / 10,
-        onTerminate: (data) => {
-          if (data.rms < this.props.silenceVolumeThreshold) {
+
+        onTerminate: ({ rms }) => {
+          const lowRMS = rms < this.props.silenceVolumeThreshold;
+
+          const isSegmentingAudioData =
+            this.audioSementationRecorder !== undefined;
+
+          const notCheckingSilence = this.silenceCheckRecorder === undefined;
+
+          if (lowRMS && isSegmentingAudioData && notCheckingSilence) {
             this.setSilenceWindowInspector();
           }
+
+          if (!lowRMS) {
+            this.silenceCheckRecorder?.interrupt();
+
+            this.setAudiosegmentationRecorder();
+          }
         },
-      });
+      }).start();
     }, this.props.silenceWindowThreshold / 10);
   }
 
   start() {
     this.setGlobalFiniteRecorder();
-    this.setAudiosegmentationRecorder();
     this.setMicroRecorder();
   }
 
   stop() {
-    this.clear();
-  }
-
-  clear() {
     this.globalFiniteRecorder?.stop();
     this.audioSementationRecorder?.stop();
-    this.microRecorder?.stop();
     this.silenceCheckRecorder?.stop();
+
+    window.clearInterval(this.intervalId);
+  }
+
+  interrupt() {
+    this.globalFiniteRecorder?.interrupt();
+    this.audioSementationRecorder?.interrupt();
+    this.silenceCheckRecorder?.interrupt();
 
     window.clearInterval(this.intervalId);
   }
