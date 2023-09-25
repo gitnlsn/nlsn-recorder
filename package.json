@@ -1,7 +1,7 @@
 {
   "name": "nlsn-recorder",
   "version": "1.0.0",
-  "main": "dist/nlsn-recorder.js",
+  "main": "dist/index.js",
   "license": "MIT",
   "scripts": {
     "build": "tsc"
