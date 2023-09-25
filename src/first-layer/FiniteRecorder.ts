@@ -1,0 +1,39 @@
+import { FiniteRecorderProps } from "./FiniteRecorder.interface";
+import { blobToAudioBuffer } from "../utils/blobToAudioBuffer";
+import { calcRMS } from "../utils/calcRMS";
+
+export class FiniteRecorder {
+  private mediaRecorder: MediaRecorder;
+
+  private timeoutId: number | undefined;
+
+  constructor(private props: FiniteRecorderProps) {
+    this.mediaRecorder = new MediaRecorder(props.mediaStream);
+    this.timeoutId = window.setTimeout(() => {
+      this.mediaRecorder.stop();
+    }, props.ttl);
+
+    this.config();
+  }
+
+  private async config() {
+    this.mediaRecorder.addEventListener("dataavailable", async (event) => {
+      const audioBuffer = await blobToAudioBuffer(event.data);
+      const rms = calcRMS(audioBuffer);
+
+      this.props.onTerminate({ rms, audioBuffer, blob: event.data });
+    });
+
+    this.mediaRecorder.addEventListener("stop", () => {
+      window.clearTimeout(this.timeoutId);
+    });
+  }
+
+  start() {
+    this.mediaRecorder.start();
+  }
+
+  stop() {
+    this.mediaRecorder.stop();
+  }
+}

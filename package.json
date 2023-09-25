@@ -1,0 +1,12 @@
+{
+  "name": "nlsn-recorder",
+  "version": "1.0.0",
+  "main": "dist/nlsn-recorder.js",
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "typescript": "^5.2.2"
+  }
+}
