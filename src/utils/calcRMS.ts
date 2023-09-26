@@ -3,15 +3,27 @@ export const calcRMS = (audioBuffer: AudioBuffer): number => {
     Array(audioBuffer.numberOfChannels).keys()
   ).map((index) => audioBuffer.getChannelData(index));
 
-  const area = channelData
+  const squaredSum = channelData
     .map((data) => {
-      return data.reduce<number>((acc, current) => {
-        return acc + current;
+      // Integration: trapezoidal rule
+      return data.reduce<number>((acc, current, index, array) => {
+        // - skipś last element
+        if (index === array.length - 1) {
+          return acc;
+        }
+
+        const next = array[index + 1];
+        const meanValue = (next + current) / 2;
+        const square = meanValue * meanValue;
+        return acc + square;
       }, 0);
     })
+    // Summation of each channel
     .reduce<number>((acc, next) => {
       return acc + next;
     }, 0);
 
-  return area / (audioBuffer.length * audioBuffer.numberOfChannels);
+  return Math.sqrt(
+    squaredSum / (audioBuffer.length * audioBuffer.numberOfChannels)
+  );
 };

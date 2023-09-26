@@ -18,7 +18,7 @@ export class Recorder {
       onTerminate: (audioData) => {
         this.props.onTerminate(audioData);
 
-        this.stop();
+        this.interrupt();
       },
     });
 
@@ -57,7 +57,7 @@ export class Recorder {
     this.intervalId = window.setInterval(() => {
       new FiniteRecorder({
         mediaStream: this.props.mediaStream,
-        ttl: this.props.silenceVolumeThreshold / 10,
+        ttl: this.props.silenceWindowThreshold / 10,
 
         onTerminate: ({ rms }) => {
           const lowRMS = rms < this.props.silenceVolumeThreshold;
